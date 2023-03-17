@@ -1,32 +1,75 @@
-import React, { useState, useEffect } from 'react';
-import { PagesList } from './PagesList';
+import React, { useState, useEffect } from "react";
+import { PagesList } from "./PagesList";
+import { ArticleDetails } from "./ArticleDetails";
+import { Form } from "./Form";
 
 // import and prepend the api url to any fetch calls
-import apiURL from '../api';
+import apiURL from "../api";
 
 export const App = () => {
+  const [pages, setPages] = useState([]);
+  const [article, setArticle] = useState();
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [user, setUser] = useState();
+  const [isAddingArticle, setIsAddingArticle] = useState(false);
+  
 
-	const [pages, setPages] = useState([]);
+  async function fetchPages() {
+    try {
+      const response = await fetch(`${apiURL}/wiki`);
+      const pagesData = await response.json();
+      setPages(pagesData);
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
-	async function fetchPages(){
-		try {
-			const response = await fetch(`${apiURL}/wiki`);
-			const pagesData = await response.json();
-			setPages(pagesData);
-		} catch (err) {
-			console.log("Oh no an error! ", err)
-		}
-	}
+  useEffect(() => {
+    fetchPages();
+  }, [isAddingArticle, selectedArticle]);
 
-	useEffect(() => {
-		fetchPages();
-	}, []);
+  async function handlePageClick(slug) {
+    try {
+      const response = await fetch(`${apiURL}/wiki/${slug}`);
+      const articleData = await response.json();
+      setArticle(articleData);
+      setSelectedArticle(slug);
+      findUser(articleData.authorId);
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
-	return (
-		<main>	
+  const findUser = async (authorId) => {
+    const res = await fetch(`${apiURL}/users/${authorId}`);
+    const author = await res.json();
+    setUser(author.name);
+  };
+
+  const addBtn = () => {
+    setIsAddingArticle(!isAddingArticle);
+  };
+
+  return (
+    <main>
       <h1>WikiVerse</h1>
-			<h2>An interesting 📚</h2>
-			<PagesList pages={pages} />
-		</main>
-	)
-}
+      {selectedArticle ? (
+        <ArticleDetails
+          article={article}
+          setSelectedArticle={setSelectedArticle}
+          user={user}
+        />
+      ) : !isAddingArticle ? (
+        <>
+          <h2>An interesting 📚</h2>
+          <h3>Click on a book for more info!</h3>
+          <PagesList pages={pages} handlePageClick={handlePageClick} />
+          <br />
+          <button onClick={addBtn}>Add A Book!</button>
+        </>
+      ) : (
+        <Form addBtn={addBtn}/>
+      )}
+    </main>
+  );
+};
